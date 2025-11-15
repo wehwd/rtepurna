@@ -2,7 +2,9 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
+    <meta name="google-site-verification" content="tOI2qXvjZak4Hp1zofdp1gb1TvStyZKXJSpBwX6B-_0" />
     <title>RTEpurna</title>
+
     <style>
         body {
             margin: 0;
@@ -46,21 +48,6 @@
             100% { opacity: 0; pointer-events: none; }
         }
     </style>
- <head>
-    <meta charset="UTF-8">
-    <meta name="google-site-verification" content="tOI2qXvjZak4Hp1zofdp1gb1TvStyZKXJSpBwX6B-_0" />
-    <title>RTEpurna</title>
-    <style>
-        body {
-            margin: 0;
-            background-color: white;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-        }
-        canvas {
-            display: block;
-        }
-    </style>
 </head>
 
 <body>
@@ -86,14 +73,11 @@
         let oyunAktif = true;
         let yeniCisimInterval = null;
 
-        // Resimler
         const karakterImg = new Image();
         karakterImg.src = 'karakter.png';
-
         const cisimImg = new Image();
         cisimImg.src = 'cisim.png';
 
-        // Cisim üret
         function yeniCisim() {
             cisimler.push({
                 x: Math.random() * (canvas.width - 60),
@@ -104,12 +88,10 @@
             });
         }
 
-        // Cisimleri güncelle
         function cisimleriGuncelle() {
             for (let i = cisimler.length - 1; i >= 0; i--) {
                 cisimler[i].y += cisimler[i].speed;
 
-                // Çarpışma olursa skor artar ve cisim kaybolur
                 if (
                     cisimler[i].x < karakter.x + karakter.width &&
                     cisimler[i].x + cisimler[i].width > karakter.x &&
@@ -127,10 +109,8 @@
             }
         }
 
-        // Çizim
         function oyunCiz() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             ctx.drawImage(karakterImg, karakter.x, karakter.y, karakter.width, karakter.height);
 
             for (let c of cisimler) {
@@ -142,7 +122,6 @@
             ctx.fillText('Skor: ' + skor, 20, 40);
         }
 
-        // Oyun döngüsü
         function oyunDongusu() {
             if (!oyunAktif) return;
             cisimleriGuncelle();
@@ -150,13 +129,11 @@
             requestAnimationFrame(oyunDongusu);
         }
 
-        // Oyunu başlat
         function baslat() {
             oyunDongusu();
             yeniCisimInterval = setInterval(yeniCisim, 1000);
         }
 
-        // Mouse hareketi
         canvas.addEventListener('mousemove', (e) => {
             if (!oyunAktif) return;
             karakter.x = e.clientX - karakter.width / 2;
@@ -168,19 +145,14 @@
             karakter.x = e.touches[0].clientX - karakter.width / 2;
         }, { passive: false });
 
-        // Pencere yeniden boyutlanınca
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             karakter.y = canvas.height - 220;
         });
 
-        // Açılış animasyonu bittikten sonra oyun başlar
         setTimeout(baslat, 3000);
     </script>
 
 </body>
 </html>
-
-
-
