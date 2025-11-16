@@ -20,7 +20,9 @@
             display: block;
         }
 
-        /* LOGO AÇILIŞ EFEKTİ */
+        /* ----------------------------------------
+           LOGO AÇILIŞ EFEKTİ + SES SENKRON GLITCH
+        ---------------------------------------- */
         #overlay {
             position: absolute;
             inset: 0;
@@ -28,28 +30,35 @@
             align-items: center;
             justify-content: center;
             background: white;
-            z-index: 50;
+            z-index: 999;
             animation: overlayFadeOut 1s ease forwards;
-            animation-delay: 2.8s;
+            animation-delay: 3.2s;
         }
 
         #logo {
-            max-width: 40%;
+            max-width: 60%;         /* Daha büyük logo */
             opacity: 0;
             transform: scale(0.6);
-            animation: logoShow 2.5s ease-out forwards;
+            animation: logoMainAnim 3s ease-out forwards;
         }
 
-        @keyframes logoShow {
-            0% { opacity: 0; transform: scale(0.6); }
-            40% { opacity: 1; transform: scale(1.1); }
-            70% { transform: scale(1.0); }
-            100% { opacity: 1; transform: scale(1.0); }
+        /* SES PATLAMASINA GÖRE GLITCH + BÜYÜME */
+        @keyframes logoMainAnim {
+            0%   { opacity: 0; transform: scale(0.6); filter: blur(0px); }
+            20%  { opacity: 1; transform: scale(0.9); }
+            45%  { transform: scale(1.0); }
+
+            /* Yankı başladığı an – GLITCH */
+            60%  { transform: scale(1.8) skewX(3deg); filter: blur(2px) brightness(120%); }
+            70%  { transform: scale(2.2) skewX(-3deg); filter: blur(1px); }
+            85%  { transform: scale(2.6); filter: blur(3px) brightness(150%); }
+
+            100% { opacity: 1; transform: scale(3.0); filter: blur(6px); }
         }
 
         @keyframes overlayFadeOut {
-            0% { opacity: 1; }
-            100% { opacity: 0; pointer-events: none; }
+            from { opacity: 1; }
+            to   { opacity: 0; pointer-events: none; }
         }
     </style>
 </head>
@@ -64,22 +73,24 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
-        /* --------------------- AÇILIŞ SESİ + YANKI --------------------- */
-
+        /* ============================================================
+           AÇILIŞ SESİ (YANKI + DELAY + GLITCH MOMENT SENKRON)
+        ============================================================ */
         let audioCtx;
         let openingBuffer = null;
 
         async function loadOpeningSound() {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+            /* Yankı – Echo efekti */
             const delay = audioCtx.createDelay();
-            delay.delayTime.value = 0.25; // yankı gecikmesi
+            delay.delayTime.value = 0.25;
 
             const feedback = audioCtx.createGain();
-            feedback.gain.value = 0.4; // yankı gücü
+            feedback.gain.value = 0.45;
 
             const outputGain = audioCtx.createGain();
-            outputGain.gain.value = 1.0;
+            outputGain.gain.value = 1.1;
 
             delay.connect(feedback);
             feedback.connect(delay);
@@ -87,6 +98,7 @@
             delay.connect(outputGain);
             outputGain.connect(audioCtx.destination);
 
+            /* MP3 dosyasını yükle */
             const response = await fetch("opening.mp3");
             const arrayBuffer = await response.arrayBuffer();
             openingBuffer = await audioCtx.decodeAudioData(arrayBuffer);
@@ -99,15 +111,20 @@
             };
         }
 
+        /* Ses dosyasını hazırla */
         loadOpeningSound();
 
+        /* Sesin başlaması = 0.5s */
         setTimeout(() => {
             if (window.playOpeningWithEcho) {
                 window.playOpeningWithEcho();
             }
         }, 500);
 
-        /* -------------------------- OYUN ------------------------------- */
+
+        /* ============================================================
+           OYUN – Hiçbir Kod Silinmedi, Aynen Kaldı
+        ============================================================ */
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -201,8 +218,10 @@
             karakter.y = canvas.height - 220;
         });
 
-        setTimeout(baslat, 3000);
+        /* Açılış animasyonu bittiğinde oyun başlıyor */
+        setTimeout(baslat, 3300);
     </script>
 
 </body>
 </html>
+
