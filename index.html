@@ -2,10 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-
-    <!-- Google Site Verification -->
     <meta name="google-site-verification" content="tOI2qXvjZak4Hp1zofdp1gb1TvStyZKXJSpBwX6B-_0" />
-
     <title>RTEpurna</title>
 
     <!-- Google Ads -->
@@ -23,7 +20,7 @@
             display: block;
         }
 
-        /* AÇILIŞ LOGO ANİMASYONU */
+        /* LOGO AÇILIŞ EFEKTİ */
         #overlay {
             position: absolute;
             inset: 0;
@@ -44,21 +41,10 @@
         }
 
         @keyframes logoShow {
-            0% {
-                opacity: 0;
-                transform: scale(0.6);
-            }
-            40% {
-                opacity: 1;
-                transform: scale(1.1);
-            }
-            70% {
-                transform: scale(1.0);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1.0);
-            }
+            0% { opacity: 0; transform: scale(0.6); }
+            40% { opacity: 1; transform: scale(1.1); }
+            70% { transform: scale(1.0); }
+            100% { opacity: 1; transform: scale(1.0); }
         }
 
         @keyframes overlayFadeOut {
@@ -78,13 +64,57 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
+        /* --------------------- AÇILIŞ SESİ + YANKI --------------------- */
+
+        let audioCtx;
+        let openingBuffer = null;
+
+        async function loadOpeningSound() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            const delay = audioCtx.createDelay();
+            delay.delayTime.value = 0.25; // yankı gecikmesi
+
+            const feedback = audioCtx.createGain();
+            feedback.gain.value = 0.4; // yankı gücü
+
+            const outputGain = audioCtx.createGain();
+            outputGain.gain.value = 1.0;
+
+            delay.connect(feedback);
+            feedback.connect(delay);
+
+            delay.connect(outputGain);
+            outputGain.connect(audioCtx.destination);
+
+            const response = await fetch("opening.mp3");
+            const arrayBuffer = await response.arrayBuffer();
+            openingBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+            window.playOpeningWithEcho = function () {
+                const source = audioCtx.createBufferSource();
+                source.buffer = openingBuffer;
+                source.connect(delay);
+                source.start(0);
+            };
+        }
+
+        loadOpeningSound();
+
+        setTimeout(() => {
+            if (window.playOpeningWithEcho) {
+                window.playOpeningWithEcho();
+            }
+        }, 500);
+
+        /* -------------------------- OYUN ------------------------------- */
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        // Karakter ve değişkenler
         let karakter = { x: canvas.width / 2, y: canvas.height - 220, width: 120, height: 150 };
         let skor = 0;
         let cisimler = [];
@@ -111,7 +141,6 @@
             for (let i = cisimler.length - 1; i >= 0; i--) {
                 cisimler[i].y += cisimler[i].speed;
 
-                // Çarpışma
                 if (
                     cisimler[i].x < karakter.x + karakter.width &&
                     cisimler[i].x + cisimler[i].width > karakter.x &&
@@ -123,7 +152,6 @@
                     continue;
                 }
 
-                // Ekranın dışına çıkarsa sil
                 if (cisimler[i].y > canvas.height + 100) {
                     cisimler.splice(i, 1);
                 }
@@ -132,13 +160,13 @@
 
         function oyunCiz() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
             ctx.drawImage(karakterImg, karakter.x, karakter.y, karakter.width, karakter.height);
 
             for (let c of cisimler) {
                 ctx.drawImage(cisimImg, c.x, c.y, c.width, c.height);
             }
 
-            // Skor
             ctx.fillStyle = 'black';
             ctx.font = '28px Arial';
             ctx.fillText('Skor: ' + skor, 20, 40);
@@ -156,27 +184,23 @@
             yeniCisimInterval = setInterval(yeniCisim, 1000);
         }
 
-        // Mouse kontrol
         canvas.addEventListener('mousemove', (e) => {
             if (!oyunAktif) return;
             karakter.x = e.clientX - karakter.width / 2;
         });
 
-        // Mobil kontrol
         canvas.addEventListener('touchmove', (e) => {
             if (!oyunAktif) return;
             e.preventDefault();
             karakter.x = e.touches[0].clientX - karakter.width / 2;
         }, { passive: false });
 
-        // Ekran boyutu değişince düzelt
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             karakter.y = canvas.height - 220;
         });
 
-        // Açılış animasyonundan sonra oyun başlasın
         setTimeout(baslat, 3000);
     </script>
 
