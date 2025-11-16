@@ -2,15 +2,15 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
+
+    <!-- Google Site Verification -->
     <meta name="google-site-verification" content="tOI2qXvjZak4Hp1zofdp1gb1TvStyZKXJSpBwX6B-_0" />
 
-    <!-- Google AdSense -->
-    <script async 
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8097201672279533"
-        crossorigin="anonymous">
-    </script>
-
     <title>RTEpurna</title>
+
+    <!-- Google Ads -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8097201672279533"
+     crossorigin="anonymous"></script>
 
     <style>
         body {
@@ -23,31 +23,42 @@
             display: block;
         }
 
-        /* LOGO AÇILIŞ EFEKTİ */
+        /* AÇILIŞ LOGO ANİMASYONU */
         #overlay {
             position: absolute;
             inset: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-direction: column;
             background: white;
             z-index: 50;
             animation: overlayFadeOut 1s ease forwards;
-            animation-delay: 3.5s;
+            animation-delay: 2.8s;
         }
 
         #logo {
-            max-width: 60%;
+            max-width: 40%;
             opacity: 0;
-            transform: scale(0.5);
-            animation: logoShow 2s ease forwards;
+            transform: scale(0.6);
+            animation: logoShow 2.5s ease-out forwards;
         }
 
         @keyframes logoShow {
-            0% { opacity: 0; transform: scale(0.9); }
-            60% { opacity: 1; transform: scale(1.5); }
-            100% { opacity: 1; transform: scale(2); }
+            0% {
+                opacity: 0;
+                transform: scale(0.6);
+            }
+            40% {
+                opacity: 1;
+                transform: scale(1.1);
+            }
+            70% {
+                transform: scale(1.0);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1.0);
+            }
         }
 
         @keyframes overlayFadeOut {
@@ -60,50 +71,20 @@
 <body>
 
     <!-- Açılış logosu -->
-    /* LOGO AÇILIŞ EFEKTİ */
-#overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: white;
-    z-index: 50;
-    animation: overlayFadeOut 1s ease forwards;
-    animation-delay: 2.8s;
-}
+    <div id="overlay">
+        <img id="logo" src="logo.png" alt="logo">
+    </div>
 
-#logo {
-    max-width: 40%;
-    opacity: 0;
-    transform: scale(0.6);
-    animation: logoShow 2.5s ease-out forwards;
-}
+    <canvas id="gameCanvas"></canvas>
 
-@keyframes logoShow {
-    0% {
-        opacity: 0;
-        transform: scale(0.6);
-    }
-    40% {
-        opacity: 1;
-        transform: scale(1.1);
-    }
-    70% {
-        transform: scale(1.0);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1.0);
-    }
-}
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
-@keyframes overlayFadeOut {
-    0% { opacity: 1; }
-    100% { opacity: 0; pointer-events: none; }
-}
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-
+        // Karakter ve değişkenler
         let karakter = { x: canvas.width / 2, y: canvas.height - 220, width: 120, height: 150 };
         let skor = 0;
         let cisimler = [];
@@ -112,6 +93,7 @@
 
         const karakterImg = new Image();
         karakterImg.src = 'karakter.png';
+
         const cisimImg = new Image();
         cisimImg.src = 'cisim.png';
 
@@ -129,6 +111,7 @@
             for (let i = cisimler.length - 1; i >= 0; i--) {
                 cisimler[i].y += cisimler[i].speed;
 
+                // Çarpışma
                 if (
                     cisimler[i].x < karakter.x + karakter.width &&
                     cisimler[i].x + cisimler[i].width > karakter.x &&
@@ -140,6 +123,7 @@
                     continue;
                 }
 
+                // Ekranın dışına çıkarsa sil
                 if (cisimler[i].y > canvas.height + 100) {
                     cisimler.splice(i, 1);
                 }
@@ -154,6 +138,7 @@
                 ctx.drawImage(cisimImg, c.x, c.y, c.width, c.height);
             }
 
+            // Skor
             ctx.fillStyle = 'black';
             ctx.font = '28px Arial';
             ctx.fillText('Skor: ' + skor, 20, 40);
@@ -171,26 +156,29 @@
             yeniCisimInterval = setInterval(yeniCisim, 1000);
         }
 
+        // Mouse kontrol
         canvas.addEventListener('mousemove', (e) => {
             if (!oyunAktif) return;
             karakter.x = e.clientX - karakter.width / 2;
         });
 
+        // Mobil kontrol
         canvas.addEventListener('touchmove', (e) => {
             if (!oyunAktif) return;
             e.preventDefault();
             karakter.x = e.touches[0].clientX - karakter.width / 2;
         }, { passive: false });
 
+        // Ekran boyutu değişince düzelt
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             karakter.y = canvas.height - 220;
         });
 
+        // Açılış animasyonundan sonra oyun başlasın
         setTimeout(baslat, 3000);
     </script>
 
 </body>
 </html>
-
