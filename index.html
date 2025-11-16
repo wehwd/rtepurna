@@ -78,49 +78,99 @@
         ============================================================ */
         let audioCtx;
         let openingBuffer = null;
+        window.__openingPlayed = false; // tekrar çalmayı engellemek için bayrak
 
         async function loadOpeningSound() {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-            /* Yankı – Echo efekti */
-            const delay = audioCtx.createDelay();
-            delay.delayTime.value = 0.25;
+                /* Yankı – Echo efekti */
+                const delay = audioCtx.createDelay();
+                delay.delayTime.value = 0.25;
 
-            const feedback = audioCtx.createGain();
-            feedback.gain.value = 0.45;
+                const feedback = audioCtx.createGain();
+                feedback.gain.value = 0.45;
 
-            const outputGain = audioCtx.createGain();
-            outputGain.gain.value = 1.1;
+                const outputGain = audioCtx.createGain();
+                outputGain.gain.value = 1.1;
 
-            delay.connect(feedback);
-            feedback.connect(delay);
+                // echo feedback loop
+                delay.connect(feedback);
+                feedback.connect(delay);
 
-            delay.connect(outputGain);
-            outputGain.connect(audioCtx.destination);
+                // delay -> output
+                delay.connect(outputGain);
+                outputGain.connect(audioCtx.destination);
 
-            /* MP3 dosyasını yükle */
-            const response = await fetch("opening.mp3");
-            const arrayBuffer = await response.arrayBuffer();
-            openingBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                /* MP3 dosyasını yükle */
+                const response = await fetch("opening.mp3");
+                const arrayBuffer = await response.arrayBuffer();
+                openingBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-            window.playOpeningWithEcho = function () {
-                const source = audioCtx.createBufferSource();
-                source.buffer = openingBuffer;
-                source.connect(delay);
-                source.start(0);
-            };
+                window.playOpeningWithEcho = function () {
+                    if (!openingBuffer || window.__openingPlayed) return;
+                    try {
+                        const source = audioCtx.createBufferSource();
+                        source.buffer = openingBuffer;
+                        // connect source both to direct output and to delay for fullness
+                        source.connect(audioCtx.destination);
+                        source.connect(delay);
+                        source.start(0);
+                        window.__openingPlayed = true;
+                    } catch (e) {
+                        // sessizce yakala
+                        console.warn("Opening sound play error:", e);
+                    }
+                };
+            } catch (e) {
+                console.warn("Audio loading failed:", e);
+            }
         }
 
         /* Ses dosyasını hazırla */
         loadOpeningSound();
 
-        /* Sesin başlaması = 0.5s */
+        /* Normalde bu zamanlama ile deniyoruz (tarayıcı izin verirse) */
         setTimeout(() => {
             if (window.playOpeningWithEcho) {
-                window.playOpeningWithEcho();
+                // Eğer otomatik engellenirse, unlock logic ile tetiklenecek
+                try { window.playOpeningWithEcho(); } catch(e) {}
             }
         }, 500);
 
+        /* ------------------------------------------------------------
+           Autoplay engelini aşma: kullanıcı etkileşimi ile açma (görünmez)
+           ------------------------------------------------------------ */
+        function unlockAudioAndPlay() {
+            // resume audio context if suspended
+            if (audioCtx && audioCtx.state === "suspended") {
+                audioCtx.resume().catch(()=>{});
+            }
+            // play if ready
+            if (window.playOpeningWithEcho && !window.__openingPlayed) {
+                try { window.playOpeningWithEcho(); } catch(e) {}
+            }
+            // remove listeners after first interaction
+            document.removeEventListener('click', unlockAudioAndPlay);
+            document.removeEventListener('touchstart', unlockAudioAndPlay);
+            document.removeEventListener('keydown', unlockAudioAndPlay);
+        }
+
+        // Add interaction listeners (first click/tap/keydown will unlock audio)
+        document.addEventListener('click', unlockAudioAndPlay, { once: true });
+        document.addEventListener('touchstart', unlockAudioAndPlay, { once: true });
+        document.addEventListener('keydown', unlockAudioAndPlay, { once: true });
+
+        // Ayrıca kısa bir süre sonra otomatik bir deneme daha (bazı tarayıcılar izin veriyor)
+        setTimeout(() => {
+            if (audioCtx && audioCtx.state === "suspended") {
+                audioCtx.resume().then(() => {
+                    if (window.playOpeningWithEcho && !window.__openingPlayed) {
+                        try { window.playOpeningWithEcho(); } catch(e) {}
+                    }
+                }).catch(()=>{});
+            }
+        }, 1200);
 
         /* ============================================================
            OYUN – Hiçbir Kod Silinmedi, Aynen Kaldı
@@ -198,6 +248,7 @@
 
         function baslat() {
             oyunDongusu();
+            if (yeniCisimInterval) clearInterval(yeniCisimInterval);
             yeniCisimInterval = setInterval(yeniCisim, 1000);
         }
 
@@ -224,4 +275,3 @@
 
 </body>
 </html>
-
