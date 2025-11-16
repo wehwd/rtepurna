@@ -60,18 +60,49 @@
 <body>
 
     <!-- Açılış logosu -->
-    <div id="overlay">
-        <img id="logo" src="logo.png" alt="logo">
-    </div>
+    /* LOGO AÇILIŞ EFEKTİ */
+#overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    z-index: 50;
+    animation: overlayFadeOut 1s ease forwards;
+    animation-delay: 2.8s;
+}
 
-    <canvas id="gameCanvas"></canvas>
+#logo {
+    max-width: 40%;
+    opacity: 0;
+    transform: scale(0.6);
+    animation: logoShow 2.5s ease-out forwards;
+}
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+@keyframes logoShow {
+    0% {
+        opacity: 0;
+        transform: scale(0.6);
+    }
+    40% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    70% {
+        transform: scale(1.0);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1.0);
+    }
+}
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+@keyframes overlayFadeOut {
+    0% { opacity: 1; }
+    100% { opacity: 0; pointer-events: none; }
+}
+
 
         let karakter = { x: canvas.width / 2, y: canvas.height - 220, width: 120, height: 150 };
         let skor = 0;
@@ -162,3 +193,4 @@
 
 </body>
 </html>
+
