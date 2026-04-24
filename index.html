@@ -12,7 +12,7 @@ body {
     font-family: Arial, sans-serif;
 }
 
-/* OVERLAY (aynı elit açılış) */
+/* OVERLAY */
 #overlay {
     position: absolute;
     inset: 0;
@@ -25,11 +25,13 @@ body {
     animation-delay: 3s;
 }
 
+/* 🔥 LOGO 4X + BACKGROUND REMOVE */
 #logo {
-    width: 260px;
+    width: 1000px; /* büyütüldü */
     opacity: 0;
     transform: scale(0.85);
     filter: blur(12px);
+    mix-blend-mode: multiply; /* beyazı yok eder */
     animation: logoIn 2.2s ease forwards;
 }
 
@@ -48,7 +50,7 @@ canvas {
     inset: 0;
 }
 
-/* 🧊 GLASS PANEL */
+/* 🧊 UI */
 #ui {
     position: absolute;
     top: 20px;
@@ -82,12 +84,9 @@ const ui = document.getElementById('ui');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-/* =========================
-   ✨ PARTİKÜL SİSTEMİ
-========================= */
+/* ✨ PARTİKÜLLER */
 let particles = [];
-
-function createParticle() {
+for(let i=0;i<80;i++){
     particles.push({
         x: Math.random()*canvas.width,
         y: Math.random()*canvas.height,
@@ -97,9 +96,7 @@ function createParticle() {
     });
 }
 
-for(let i=0;i<80;i++) createParticle();
-
-function drawParticles() {
+function drawParticles(){
     for(let p of particles){
         ctx.beginPath();
         ctx.fillStyle = "rgba(0,0,0,"+p.opacity*0.15+")";
@@ -107,21 +104,17 @@ function drawParticles() {
         ctx.fill();
 
         p.y += p.speedY;
-        if(p.y > canvas.height) {
+        if(p.y > canvas.height){
             p.y = 0;
             p.x = Math.random()*canvas.width;
         }
     }
 }
 
-/* =========================
-   OYUN (dokunulmadı)
-========================= */
-let karakter = { x: canvas.width / 2, y: canvas.height - 220, width: 120, height: 150 };
+/* 🎮 OYUN */
+let karakter = { x: canvas.width / 2, y: canvas.height - 220, width: 140, height: 170 };
 let skor = 0;
 let cisimler = [];
-let oyunAktif = true;
-let yeniCisimInterval = null;
 
 const karakterImg = new Image();
 karakterImg.src = 'karakter.png';
@@ -129,17 +122,33 @@ karakterImg.src = 'karakter.png';
 const cisimImg = new Image();
 cisimImg.src = 'cisim.png';
 
-function yeniCisim() {
+function yeniCisim(){
     cisimler.push({
         x: Math.random() * (canvas.width - 60),
         y: -60,
         width: 60,
         height: 60,
-        speed: 2 + Math.random() * 2
+        speed: 2 + Math.random()*2
     });
 }
 
-function cisimleriGuncelle() {
+function removeWhite(ctx, x, y, w, h){
+    const imgData = ctx.getImageData(x, y, w, h);
+    const data = imgData.data;
+
+    for(let i=0;i<data.length;i+=4){
+        const r = data[i];
+        const g = data[i+1];
+        const b = data[i+2];
+
+        if(r>240 && g>240 && b>240){
+            data[i+3] = 0;
+        }
+    }
+    ctx.putImageData(imgData, x, y);
+}
+
+function cisimleriGuncelle(){
     for (let i = cisimler.length - 1; i >= 0; i--) {
         cisimler[i].y += cisimler[i].speed;
 
@@ -161,43 +170,35 @@ function cisimleriGuncelle() {
     }
 }
 
-function oyunCiz() {
+function oyunCiz(){
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    drawParticles(); // ✨ ekledik
+    drawParticles();
 
     ctx.drawImage(karakterImg, karakter.x, karakter.y, karakter.width, karakter.height);
+    removeWhite(ctx, karakter.x, karakter.y, karakter.width, karakter.height);
 
     for (let c of cisimler) {
         ctx.drawImage(cisimImg, c.x, c.y, c.width, c.height);
     }
 }
 
-function oyunDongusu() {
-    if (!oyunAktif) return;
+function oyunDongusu(){
     cisimleriGuncelle();
     oyunCiz();
     requestAnimationFrame(oyunDongusu);
 }
 
-function baslat() {
+function baslat(){
     oyunDongusu();
-    if (yeniCisimInterval) clearInterval(yeniCisimInterval);
-    yeniCisimInterval = setInterval(yeniCisim, 1000);
+    setInterval(yeniCisim, 1000);
 }
 
-canvas.addEventListener('mousemove', (e) => {
-    if (!oyunAktif) return;
-    karakter.x = e.clientX - karakter.width / 2;
+canvas.addEventListener('mousemove', (e)=>{
+    karakter.x = e.clientX - karakter.width/2;
 });
 
-canvas.addEventListener('touchmove', (e) => {
-    if (!oyunAktif) return;
-    e.preventDefault();
-    karakter.x = e.touches[0].clientX - karakter.width / 2;
-}, { passive: false });
-
-window.addEventListener('resize', () => {
+window.addEventListener('resize', ()=>{
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     karakter.y = canvas.height - 220;
