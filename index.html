@@ -107,7 +107,7 @@ function drawParticles(){
     }
 }
 
-/* 💥 ÇARPIŞMA EFEKTİ */
+/* 💥 EFFECT */
 let effects = [];
 
 function createEffect(x,y){
@@ -140,37 +140,28 @@ function drawEffects(){
     }
 }
 
-/* 🔊 RANDOM SES SİSTEMİ */
+/* 💰 COIN SOUND */
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-function playBlup(){
+function playCoin(){
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
 
-    const types = ["sine", "triangle", "square"];
-    osc.type = types[Math.floor(Math.random()*types.length)];
+    osc.type = "square";
+    osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.12);
 
-    let baseFreq = 300 + Math.random()*400;
-
-    osc.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(
-        baseFreq * (0.3 + Math.random()*0.3),
-        audioCtx.currentTime + 0.12 + Math.random()*0.1
-    );
-
-    let duration = 0.1 + Math.random()*0.15;
-
-    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
 
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
     osc.start();
-    osc.stop(audioCtx.currentTime + duration);
+    osc.stop(audioCtx.currentTime + 0.12);
 }
 
-/* 🎮 OYUN */
+/* 🎮 GAME */
 let karakter = { x: canvas.width / 2, y: canvas.height - 220, width: 140, height: 170 };
 let skor = 0;
 let cisimler = [];
@@ -191,7 +182,7 @@ function yeniCisim(){
     });
 }
 
-/* 🧼 BACKGROUND REMOVE */
+/* 🧼 REMOVE WHITE */
 function removeWhite(ctx, x, y, w, h){
     const imgData = ctx.getImageData(x, y, w, h);
     const data = imgData.data;
@@ -222,7 +213,7 @@ function cisimleriGuncelle(){
             ui.innerText = "Skor: " + skor;
 
             createEffect(cisimler[i].x, cisimler[i].y);
-            playBlup();
+            playCoin();
 
             cisimler.splice(i, 1);
             continue;
