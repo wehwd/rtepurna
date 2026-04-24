@@ -9,13 +9,14 @@ body {
     margin: 0;
     background: #f2f2f2;
     overflow: hidden;
-    font-family: Arial, sans-serif;
+    font-family: Arial;
 }
 
+/* Açılış */
 #overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, #ffffff, #eaeaea, #dcdcdc);
+    background: linear-gradient(135deg,#fff,#eee,#ddd);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -27,36 +28,28 @@ body {
 #logo {
     width: 1000px;
     opacity: 0;
-    transform: scale(0.85);
-    filter: blur(12px);
+    filter: blur(10px);
+    animation: logoIn 2s forwards;
     mix-blend-mode: multiply;
-    animation: logoIn 2.2s ease forwards;
 }
 
 @keyframes logoIn {
-    0% {opacity:0; transform:scale(0.85); filter:blur(12px);}
-    100% {opacity:1; transform:scale(1); filter:blur(0);}
+    to { opacity:1; filter:blur(0);}
 }
 
 @keyframes fadeOut {
-    to {opacity:0; pointer-events:none;}
+    to { opacity:0; pointer-events:none;}
 }
 
-canvas {
-    position: absolute;
-    inset: 0;
-}
-
+/* UI */
 #ui {
     position: absolute;
     top: 20px;
     left: 20px;
-    padding: 12px 20px;
-    border-radius: 14px;
+    padding: 10px 18px;
+    border-radius: 12px;
     backdrop-filter: blur(10px);
-    background: rgba(255,255,255,0.35);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-    font-size: 18px;
+    background: rgba(255,255,255,0.4);
 }
 
 #gameover {
@@ -68,6 +61,11 @@ canvas {
     flex-direction: column;
     background: rgba(255,255,255,0.7);
     font-size: 28px;
+}
+
+canvas {
+    position: absolute;
+    inset: 0;
 }
 </style>
 </head>
@@ -82,183 +80,190 @@ canvas {
 
 <div id="gameover">
     <div>OYUN BİTTİ</div>
-    <div style="font-size:18px;margin-top:10px;">R tuşuna basarak yeniden başla</div>
+    <div style="font-size:16px">R bas → restart</div>
 </div>
 
 <canvas id="gameCanvas"></canvas>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const ui = document.getElementById('ui');
-const gameoverDiv = document.getElementById('gameover');
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const ui = document.getElementById("ui");
+const gameoverDiv = document.getElementById("gameover");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+canvas.width = innerWidth;
+canvas.height = innerHeight;
 
-/* High score */
-let highScore = localStorage.getItem("highscore") || 0;
+/* skor */
+let highScore = localStorage.getItem("hs") || 0;
 
-/* particles */
-let particles = [];
-for(let i=0;i<80;i++){
-    particles.push({
-        x: Math.random()*canvas.width,
-        y: Math.random()*canvas.height,
-        size: Math.random()*2+1,
-        speedY: Math.random()*0.5+0.2,
-        opacity: Math.random()
-    });
-}
+/* partiküller */
+let particles = Array.from({length:60},()=>({
+    x:Math.random()*canvas.width,
+    y:Math.random()*canvas.height,
+    s:Math.random()*2,
+    v:Math.random()*0.5
+}));
 
 function drawParticles(){
     for(let p of particles){
         ctx.beginPath();
-        ctx.fillStyle = "rgba(0,0,0,"+p.opacity*0.15+")";
-        ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+        ctx.fillStyle="rgba(0,0,0,0.1)";
+        ctx.arc(p.x,p.y,p.s,0,Math.PI*2);
         ctx.fill();
-        p.y+=p.speedY;
+        p.y+=p.v;
         if(p.y>canvas.height){p.y=0;p.x=Math.random()*canvas.width;}
     }
 }
 
-/* effects */
+/* efekt */
 let effects=[];
-function createEffect(x,y){
-    for(let i=0;i<12;i++){
-        effects.push({x,y,vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*4,life:30});
+function effect(x,y){
+    for(let i=0;i<10;i++){
+        effects.push({x,y,vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*4,l:20});
     }
 }
 function drawEffects(){
     for(let i=effects.length-1;i>=0;i--){
         let e=effects[i];
-        ctx.beginPath();
-        ctx.arc(e.x,e.y,3,0,Math.PI*2);
-        ctx.fill();
-        e.x+=e.vx; e.y+=e.vy; e.life--;
-        if(e.life<=0) effects.splice(i,1);
+        ctx.fillRect(e.x,e.y,3,3);
+        e.x+=e.vx; e.y+=e.vy; e.l--;
+        if(e.l<=0) effects.splice(i,1);
     }
 }
 
-/* sound */
+/* ses */
 const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-function playCoin(){
+function coin(){
     const o=audioCtx.createOscillator();
     const g=audioCtx.createGain();
     o.type="square";
     o.frequency.setValueAtTime(900,audioCtx.currentTime);
-    o.frequency.exponentialRampToValueAtTime(400,audioCtx.currentTime+0.12);
+    o.frequency.exponentialRampToValueAtTime(400,audioCtx.currentTime+0.1);
     g.gain.setValueAtTime(0.3,audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.12);
+    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.1);
     o.connect(g); g.connect(audioCtx.destination);
-    o.start(); o.stop(audioCtx.currentTime+0.12);
+    o.start(); o.stop(audioCtx.currentTime+0.1);
 }
 
-/* game */
-let karakter, skor, cisimler, oyunAktif;
+/* oyun */
+let karakter, skor, cisimler, aktif;
 
 const karakterImg=new Image();
-karakterImg.src='karakter.png';
-const cisimImg=new Image();
-cisimImg.src='cisim.png';
+karakterImg.src="karakter.png";
 
-function resetGame(){
-    karakter={x:canvas.width/2,y:canvas.height-220,width:140,height:170};
+const cisimImg=new Image();
+cisimImg.src="cisim.png";
+
+function reset(){
+    karakter={x:canvas.width/2,y:canvas.height-200,w:140,h:170};
     skor=0;
     cisimler=[];
-    oyunAktif=true;
+    aktif=true;
     gameoverDiv.style.display="none";
 }
 
-function yeniCisim(){
-    if(!oyunAktif) return;
+/* spawn */
+function spawn(){
+    if(!aktif) return;
     cisimler.push({
         x:Math.random()*(canvas.width-60),
         y:-60,
-        width:60,
-        height:60,
-        speed:2+Math.random()*2
+        w:60,h:60,
+        s:2+Math.random()*2
     });
 }
 
-function removeWhite(ctx,x,y,w,h){
+/* beyaz sil */
+function removeWhite(x,y,w,h){
     let img=ctx.getImageData(x,y,w,h);
     let d=img.data;
     for(let i=0;i<d.length;i+=4){
-        if(d[i]>240 && d[i+1]>240 && d[i+2]>240){
-            d[i+3]=0;
-        }
+        if(d[i]>240&&d[i+1]>240&&d[i+2]>240) d[i+3]=0;
     }
     ctx.putImageData(img,x,y);
 }
 
+/* update */
 function update(){
     for(let i=cisimler.length-1;i>=0;i--){
         let c=cisimler[i];
-        c.y+=c.speed;
+        c.y+=c.s;
 
         if(c.y>canvas.height){
-            oyunAktif=false;
+            aktif=false;
             gameoverDiv.style.display="flex";
         }
 
         if(
-            c.x<karakter.x+karakter.width &&
-            c.x+c.width>karakter.x &&
-            c.y<karakter.y+karakter.height &&
-            c.y+c.height>karakter.y
+            c.x<karakter.x+karakter.w &&
+            c.x+c.w>karakter.x &&
+            c.y<karakter.y+karakter.h &&
+            c.y+c.h>karakter.y
         ){
             skor++;
             if(skor>highScore){
                 highScore=skor;
-                localStorage.setItem("highscore",highScore);
+                localStorage.setItem("hs",highScore);
             }
-
-            createEffect(c.x,c.y);
-            playCoin();
-
+            effect(c.x,c.y);
+            coin();
             cisimler.splice(i,1);
         }
     }
 }
 
+/* draw */
 function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     drawParticles();
     drawEffects();
 
-    ctx.drawImage(karakterImg,karakter.x,karakter.y,karakter.width,karakter.height);
-    removeWhite(ctx,karakter.x,karakter.y,karakter.width,karakter.height);
+    ctx.drawImage(karakterImg,karakter.x,karakter.y,karakter.w,karakter.h);
+    removeWhite(karakter.x,karakter.y,karakter.w,karakter.h);
 
     for(let c of cisimler){
-        ctx.drawImage(cisimImg,c.x,c.y,c.width,c.height);
-        removeWhite(ctx,c.x,c.y,c.width,c.height);
+        ctx.drawImage(cisimImg,c.x,c.y,c.w,c.h);
+        removeWhite(c.x,c.y,c.w,c.h);
     }
 
-    ui.innerText="Skor: "+skor+" | Rekor: "+highScore;
+    ui.innerText=`Skor: ${skor} | Rekor: ${highScore}`;
 }
 
+/* loop */
 function loop(){
-    if(oyunAktif){
+    if(aktif){
         update();
         draw();
     }
     requestAnimationFrame(loop);
 }
 
+/* kontrol */
+canvas.addEventListener("mousemove",(e)=>{
+    if(!aktif) return;
+    karakter.x=e.clientX-karakter.w/2;
+});
+
+canvas.addEventListener("touchmove",(e)=>{
+    if(!aktif) return;
+    e.preventDefault();
+    karakter.x=e.touches[0].clientX-karakter.w/2;
+},{passive:false});
+
 window.addEventListener("keydown",(e)=>{
-    if(e.key==="r") resetGame();
+    if(e.key==="r") reset();
 });
 
 window.addEventListener("resize",()=>{
-    canvas.width=window.innerWidth;
-    canvas.height=window.innerHeight;
+    canvas.width=innerWidth;
+    canvas.height=innerHeight;
 });
 
-resetGame();
+reset();
 loop();
-setInterval(yeniCisim,1000);
+setInterval(spawn,1000);
 </script>
 
 </body>
