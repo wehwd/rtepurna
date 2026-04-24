@@ -57,7 +57,17 @@ canvas {
     background: rgba(255,255,255,0.35);
     box-shadow: 0 8px 25px rgba(0,0,0,0.1);
     font-size: 18px;
-    color: #111;
+}
+
+#gameover {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: rgba(255,255,255,0.7);
+    font-size: 28px;
 }
 </style>
 </head>
@@ -68,7 +78,12 @@ canvas {
     <img id="logo" src="logo.png">
 </div>
 
-<div id="ui">Skor: 0</div>
+<div id="ui">Skor: 0 | Rekor: 0</div>
+
+<div id="gameover">
+    <div>OYUN BİTTİ</div>
+    <div style="font-size:18px;margin-top:10px;">R tuşuna basarak yeniden başla</div>
+</div>
 
 <canvas id="gameCanvas"></canvas>
 
@@ -76,18 +91,22 @@ canvas {
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const ui = document.getElementById('ui');
+const gameoverDiv = document.getElementById('gameover');
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-/* ✨ BACKGROUND PARTICLES */
+/* High score */
+let highScore = localStorage.getItem("highscore") || 0;
+
+/* particles */
 let particles = [];
 for(let i=0;i<80;i++){
     particles.push({
         x: Math.random()*canvas.width,
         y: Math.random()*canvas.height,
-        size: Math.random()*2 + 1,
-        speedY: Math.random()*0.5 + 0.2,
+        size: Math.random()*2+1,
+        speedY: Math.random()*0.5+0.2,
         opacity: Math.random()
     });
 }
@@ -96,172 +115,150 @@ function drawParticles(){
     for(let p of particles){
         ctx.beginPath();
         ctx.fillStyle = "rgba(0,0,0,"+p.opacity*0.15+")";
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+        ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
         ctx.fill();
-
-        p.y += p.speedY;
-        if(p.y > canvas.height){
-            p.y = 0;
-            p.x = Math.random()*canvas.width;
-        }
+        p.y+=p.speedY;
+        if(p.y>canvas.height){p.y=0;p.x=Math.random()*canvas.width;}
     }
 }
 
-/* 💥 EFFECT */
-let effects = [];
-
+/* effects */
+let effects=[];
 function createEffect(x,y){
     for(let i=0;i<12;i++){
-        effects.push({
-            x:x,
-            y:y,
-            vx:(Math.random()-0.5)*4,
-            vy:(Math.random()-0.5)*4,
-            life:30
-        });
+        effects.push({x,y,vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*4,life:30});
     }
 }
-
 function drawEffects(){
     for(let i=effects.length-1;i>=0;i--){
-        let e = effects[i];
+        let e=effects[i];
         ctx.beginPath();
-        ctx.fillStyle="rgba(0,0,0,0.25)";
         ctx.arc(e.x,e.y,3,0,Math.PI*2);
         ctx.fill();
-
-        e.x+=e.vx;
-        e.y+=e.vy;
-        e.life--;
-
-        if(e.life<=0){
-            effects.splice(i,1);
-        }
+        e.x+=e.vx; e.y+=e.vy; e.life--;
+        if(e.life<=0) effects.splice(i,1);
     }
 }
 
-/* 💰 COIN SOUND */
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
+/* sound */
+const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
 function playCoin(){
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.type = "square";
-    osc.frequency.setValueAtTime(900, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.12);
-
-    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.12);
+    const o=audioCtx.createOscillator();
+    const g=audioCtx.createGain();
+    o.type="square";
+    o.frequency.setValueAtTime(900,audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(400,audioCtx.currentTime+0.12);
+    g.gain.setValueAtTime(0.3,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.12);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+0.12);
 }
 
-/* 🎮 GAME */
-let karakter = { x: canvas.width / 2, y: canvas.height - 220, width: 140, height: 170 };
-let skor = 0;
-let cisimler = [];
+/* game */
+let karakter, skor, cisimler, oyunAktif;
 
-const karakterImg = new Image();
-karakterImg.src = 'karakter.png';
+const karakterImg=new Image();
+karakterImg.src='karakter.png';
+const cisimImg=new Image();
+cisimImg.src='cisim.png';
 
-const cisimImg = new Image();
-cisimImg.src = 'cisim.png';
+function resetGame(){
+    karakter={x:canvas.width/2,y:canvas.height-220,width:140,height:170};
+    skor=0;
+    cisimler=[];
+    oyunAktif=true;
+    gameoverDiv.style.display="none";
+}
 
 function yeniCisim(){
+    if(!oyunAktif) return;
     cisimler.push({
-        x: Math.random() * (canvas.width - 60),
-        y: -60,
-        width: 60,
-        height: 60,
-        speed: 2 + Math.random()*2
+        x:Math.random()*(canvas.width-60),
+        y:-60,
+        width:60,
+        height:60,
+        speed:2+Math.random()*2
     });
 }
 
-/* 🧼 REMOVE WHITE */
-function removeWhite(ctx, x, y, w, h){
-    const imgData = ctx.getImageData(x, y, w, h);
-    const data = imgData.data;
-
-    for(let i=0;i<data.length;i+=4){
-        const r = data[i];
-        const g = data[i+1];
-        const b = data[i+2];
-
-        if(r>240 && g>240 && b>240){
-            data[i+3] = 0;
+function removeWhite(ctx,x,y,w,h){
+    let img=ctx.getImageData(x,y,w,h);
+    let d=img.data;
+    for(let i=0;i<d.length;i+=4){
+        if(d[i]>240 && d[i+1]>240 && d[i+2]>240){
+            d[i+3]=0;
         }
     }
-    ctx.putImageData(imgData, x, y);
+    ctx.putImageData(img,x,y);
 }
 
-function cisimleriGuncelle(){
-    for (let i = cisimler.length - 1; i >= 0; i--) {
-        cisimler[i].y += cisimler[i].speed;
+function update(){
+    for(let i=cisimler.length-1;i>=0;i--){
+        let c=cisimler[i];
+        c.y+=c.speed;
 
-        if (
-            cisimler[i].x < karakter.x + karakter.width &&
-            cisimler[i].x + cisimler[i].width > karakter.x &&
-            cisimler[i].y < karakter.y + karakter.height &&
-            cisimler[i].y + cisimler[i].height > karakter.y
-        ) {
+        if(c.y>canvas.height){
+            oyunAktif=false;
+            gameoverDiv.style.display="flex";
+        }
+
+        if(
+            c.x<karakter.x+karakter.width &&
+            c.x+c.width>karakter.x &&
+            c.y<karakter.y+karakter.height &&
+            c.y+c.height>karakter.y
+        ){
             skor++;
-            ui.innerText = "Skor: " + skor;
+            if(skor>highScore){
+                highScore=skor;
+                localStorage.setItem("highscore",highScore);
+            }
 
-            createEffect(cisimler[i].x, cisimler[i].y);
+            createEffect(c.x,c.y);
             playCoin();
 
-            cisimler.splice(i, 1);
-            continue;
-        }
-
-        if (cisimler[i].y > canvas.height + 100) {
-            cisimler.splice(i, 1);
+            cisimler.splice(i,1);
         }
     }
 }
 
-function oyunCiz(){
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
     drawParticles();
     drawEffects();
 
-    ctx.drawImage(karakterImg, karakter.x, karakter.y, karakter.width, karakter.height);
-    removeWhite(ctx, karakter.x, karakter.y, karakter.width, karakter.height);
+    ctx.drawImage(karakterImg,karakter.x,karakter.y,karakter.width,karakter.height);
+    removeWhite(ctx,karakter.x,karakter.y,karakter.width,karakter.height);
 
-    for (let c of cisimler) {
-        ctx.drawImage(cisimImg, c.x, c.y, c.width, c.height);
-        removeWhite(ctx, c.x, c.y, c.width, c.height);
+    for(let c of cisimler){
+        ctx.drawImage(cisimImg,c.x,c.y,c.width,c.height);
+        removeWhite(ctx,c.x,c.y,c.width,c.height);
     }
+
+    ui.innerText="Skor: "+skor+" | Rekor: "+highScore;
 }
 
-function oyunDongusu(){
-    cisimleriGuncelle();
-    oyunCiz();
-    requestAnimationFrame(oyunDongusu);
+function loop(){
+    if(oyunAktif){
+        update();
+        draw();
+    }
+    requestAnimationFrame(loop);
 }
 
-function baslat(){
-    oyunDongusu();
-    setInterval(yeniCisim, 1000);
-}
-
-canvas.addEventListener('mousemove', (e)=>{
-    karakter.x = e.clientX - karakter.width/2;
+window.addEventListener("keydown",(e)=>{
+    if(e.key==="r") resetGame();
 });
 
-window.addEventListener('resize', ()=>{
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    karakter.y = canvas.height - 220;
+window.addEventListener("resize",()=>{
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight;
 });
 
-setTimeout(baslat, 3000);
+resetGame();
+loop();
+setInterval(yeniCisim,1000);
 </script>
 
 </body>
