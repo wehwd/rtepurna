@@ -9,259 +9,212 @@ body {
     margin: 0;
     background: #f2f2f2;
     overflow: hidden;
-    font-family: Arial, sans-serif;
+    font-family: Arial;
+    transition: background 0.3s;
 }
 
-#overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, #ffffff, #eaeaea, #dcdcdc);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 999;
-    animation: fadeOut 1.2s ease forwards;
-    animation-delay: 3s;
+.dark {
+    background: #111;
+    color: white;
 }
 
-#logo {
-    width: 1000px;
-    opacity: 0;
-    transform: scale(0.85);
-    filter: blur(12px);
-    mix-blend-mode: multiply;
-    animation: logoIn 2.2s ease forwards;
-}
-
-@keyframes logoIn {
-    0% {opacity:0; transform:scale(0.85); filter:blur(12px);}
-    100% {opacity:1; transform:scale(1); filter:blur(0);}
-}
-
-@keyframes fadeOut {
-    to {opacity:0; pointer-events:none;}
-}
-
-canvas {
-    position: absolute;
-    inset: 0;
-}
-
-#ui {
+/* SETTINGS BUTTON */
+#settingsBtn {
     position: absolute;
     top: 20px;
-    left: 20px;
-    padding: 12px 20px;
-    border-radius: 14px;
+    right: 20px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.6);
     backdrop-filter: blur(10px);
-    background: rgba(255,255,255,0.35);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-    font-size: 18px;
-    color: #111;
+    cursor: pointer;
+    z-index: 1000;
+}
+
+/* PANEL */
+#settingsPanel {
+    position: absolute;
+    top: 70px;
+    right: 20px;
+    width: 250px;
+    padding: 15px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(10px);
+    display: none;
+    z-index: 1000;
+}
+
+.dark #settingsPanel {
+    background: rgba(30,30,30,0.9);
+}
+
+/* leaderboard */
+#leaderboard {
+    margin-top: 10px;
+    font-size: 14px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="overlay">
-    <img id="logo" src="logo.png">
-</div>
+<div id="settingsBtn">⚙️</div>
 
-<div id="ui">Skor: 0</div>
+<div id="settingsPanel">
+    <div>
+        <button onclick="toggleDark()">🌙 Koyu Mod</button>
+    </div>
+
+    <div id="leaderboard">
+        <b>🌍 Dünya Skoru</b>
+        <div id="scores"></div>
+    </div>
+</div>
 
 <canvas id="gameCanvas"></canvas>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const ui = document.getElementById('ui');
+const settingsBtn = document.getElementById("settingsBtn");
+const panel = document.getElementById("settingsPanel");
+const scoresDiv = document.getElementById("scores");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+settingsBtn.onclick = () => {
+    panel.style.display = panel.style.display === "block" ? "none" : "block";
+};
 
-/* ✨ BACKGROUND PARTICLES */
-let particles = [];
-for(let i=0;i<80;i++){
-    particles.push({
-        x: Math.random()*canvas.width,
-        y: Math.random()*canvas.height,
-        size: Math.random()*2 + 1,
-        speedY: Math.random()*0.5 + 0.2,
-        opacity: Math.random()
+/* 🌙 DARK MODE */
+function toggleDark(){
+    document.body.classList.toggle("dark");
+}
+
+/* 🌍 FAKE LEADERBOARD */
+let fakeScores = [
+    {name:"Ali",score:120},
+    {name:"Veli",score:95},
+    {name:"Ayşe",score:80},
+    {name:"Sen",score:0}
+];
+
+function updateBoard(currentScore){
+    fakeScores[3].score = currentScore;
+    fakeScores.sort((a,b)=>b.score-a.score);
+
+    scoresDiv.innerHTML = "";
+    fakeScores.forEach(s=>{
+        scoresDiv.innerHTML += `${s.name}: ${s.score}<br>`;
     });
 }
 
-function drawParticles(){
-    for(let p of particles){
-        ctx.beginPath();
-        ctx.fillStyle = "rgba(0,0,0,"+p.opacity*0.15+")";
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-        ctx.fill();
+/* ================= OYUN ================= */
 
-        p.y += p.speedY;
-        if(p.y > canvas.height){
-            p.y = 0;
-            p.x = Math.random()*canvas.width;
-        }
-    }
-}
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-/* 💥 ÇARPIŞMA EFEKTİ */
-let effects = [];
+canvas.width = innerWidth;
+canvas.height = innerHeight;
 
-function createEffect(x,y){
-    for(let i=0;i<12;i++){
-        effects.push({
-            x:x,
-            y:y,
-            vx:(Math.random()-0.5)*4,
-            vy:(Math.random()-0.5)*4,
-            life:30
-        });
-    }
-}
-
-function drawEffects(){
-    for(let i=effects.length-1;i>=0;i--){
-        let e = effects[i];
-        ctx.beginPath();
-        ctx.fillStyle="rgba(0,0,0,0.2)";
-        ctx.arc(e.x,e.y,3,0,Math.PI*2);
-        ctx.fill();
-
-        e.x+=e.vx;
-        e.y+=e.vy;
-        e.life--;
-
-        if(e.life<=0){
-            effects.splice(i,1);
-        }
-    }
-}
-
-/* 🔊 BLUP SES */
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-function playBlup(){
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.15);
-
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.15);
-}
-
-/* 🎮 OYUN */
-let karakter = { x: canvas.width / 2, y: canvas.height - 220, width: 140, height: 170 };
+let karakter = {x:canvas.width/2,y:canvas.height-200,w:140,h:170};
 let skor = 0;
 let cisimler = [];
+let aktif = true;
 
-const karakterImg = new Image();
-karakterImg.src = 'karakter.png';
+/* görseller */
+const karakterImg=new Image();
+karakterImg.src="karakter.png";
+const cisimImg=new Image();
+cisimImg.src="cisim.png";
 
-const cisimImg = new Image();
-cisimImg.src = 'cisim.png';
+/* ses */
+const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+function coin(){
+    const o=audioCtx.createOscillator();
+    const g=audioCtx.createGain();
+    o.type="square";
+    o.frequency.setValueAtTime(900,audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(400,audioCtx.currentTime+0.1);
+    g.gain.setValueAtTime(0.3,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.1);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+0.1);
+}
 
-function yeniCisim(){
+/* spawn */
+function spawn(){
+    if(!aktif) return;
     cisimler.push({
-        x: Math.random() * (canvas.width - 60),
-        y: -60,
-        width: 60,
-        height: 60,
-        speed: 2 + Math.random()*2
+        x:Math.random()*(canvas.width-60),
+        y:-60,
+        w:60,h:60,
+        s:2+Math.random()*2
     });
 }
 
-/* 🧼 BACKGROUND REMOVE */
-function removeWhite(ctx, x, y, w, h){
-    const imgData = ctx.getImageData(x, y, w, h);
-    const data = imgData.data;
-
-    for(let i=0;i<data.length;i+=4){
-        const r = data[i];
-        const g = data[i+1];
-        const b = data[i+2];
-
-        if(r>240 && g>240 && b>240){
-            data[i+3] = 0;
-        }
+/* beyaz sil */
+function removeWhite(x,y,w,h){
+    let img=ctx.getImageData(x,y,w,h);
+    let d=img.data;
+    for(let i=0;i<d.length;i+=4){
+        if(d[i]>240&&d[i+1]>240&&d[i+2]>240) d[i+3]=0;
     }
-    ctx.putImageData(imgData, x, y);
+    ctx.putImageData(img,x,y);
 }
 
-function cisimleriGuncelle(){
-    for (let i = cisimler.length - 1; i >= 0; i--) {
-        cisimler[i].y += cisimler[i].speed;
+/* update */
+function update(){
+    for(let i=cisimler.length-1;i>=0;i--){
+        let c=cisimler[i];
+        c.y+=c.s;
 
-        if (
-            cisimler[i].x < karakter.x + karakter.width &&
-            cisimler[i].x + cisimler[i].width > karakter.x &&
-            cisimler[i].y < karakter.y + karakter.height &&
-            cisimler[i].y + cisimler[i].height > karakter.y
-        ) {
+        if(
+            c.x<karakter.x+karakter.w &&
+            c.x+c.w>karakter.x &&
+            c.y<karakter.y+karakter.h &&
+            c.y+c.h>karakter.y
+        ){
             skor++;
-            ui.innerText = "Skor: " + skor;
-
-            createEffect(cisimler[i].x, cisimler[i].y); // 💥 efekt
-            playBlup(); // 🔊 ses
-
-            cisimler.splice(i, 1);
-            continue;
+            coin();
+            updateBoard(skor);
+            cisimler.splice(i,1);
         }
 
-        if (cisimler[i].y > canvas.height + 100) {
-            cisimler.splice(i, 1);
+        if(c.y>canvas.height){
+            aktif=false;
         }
     }
 }
 
-function oyunCiz(){
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+/* draw */
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    drawParticles();
-    drawEffects();
+    ctx.drawImage(karakterImg,karakter.x,karakter.y,karakter.w,karakter.h);
+    removeWhite(karakter.x,karakter.y,karakter.w,karakter.h);
 
-    ctx.drawImage(karakterImg, karakter.x, karakter.y, karakter.width, karakter.height);
-    removeWhite(ctx, karakter.x, karakter.y, karakter.width, karakter.height);
-
-    for (let c of cisimler) {
-        ctx.drawImage(cisimImg, c.x, c.y, c.width, c.height);
-        removeWhite(ctx, c.x, c.y, c.width, c.height); // 🔥 NESNEYE DE EKLENDİ
+    for(let c of cisimler){
+        ctx.drawImage(cisimImg,c.x,c.y,c.w,c.h);
+        removeWhite(c.x,c.y,c.w,c.h);
     }
 }
 
-function oyunDongusu(){
-    cisimleriGuncelle();
-    oyunCiz();
-    requestAnimationFrame(oyunDongusu);
+/* loop */
+function loop(){
+    if(aktif){
+        update();
+        draw();
+    }
+    requestAnimationFrame(loop);
 }
 
-function baslat(){
-    oyunDongusu();
-    setInterval(yeniCisim, 1000);
-}
-
-canvas.addEventListener('mousemove', (e)=>{
-    karakter.x = e.clientX - karakter.width/2;
+/* kontrol */
+canvas.addEventListener("mousemove",(e)=>{
+    karakter.x=e.clientX-karakter.w/2;
 });
 
-window.addEventListener('resize', ()=>{
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    karakter.y = canvas.height - 220;
-});
-
-setTimeout(baslat, 3000);
+/* init */
+updateBoard(0);
+loop();
+setInterval(spawn,1000);
 </script>
 
 </body>
