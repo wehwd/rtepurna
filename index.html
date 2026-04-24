@@ -5,45 +5,45 @@
     <meta name="google-site-verification" content="tOI2qXvjZak4Hp1zofdp1gb1TvStyZKXJSpBwX6B-_0" />
     <title>RTEpurna</title>
 
-    <!-- Google Ads -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8097201672279533"
      crossorigin="anonymous"></script>
 
     <style>
         body {
             margin: 0;
-            background-color: white;
+            background-color: #f5f5f5;
             overflow: hidden;
             font-family: Arial, sans-serif;
         }
+
         canvas {
             display: block;
         }
 
-        /* ==============================
-           YENİ LÜKS AÇILIŞ EFEKTİ
-        ============================== */
+        /* =========================
+           ELİT AÇILIŞ EFEKTİ
+        ========================= */
         #overlay {
             position: absolute;
             inset: 0;
-            background: radial-gradient(circle at center, #ffffff 0%, #f0f0f0 40%, #dcdcdc 100%);
+            background: linear-gradient(135deg, #ffffff, #eaeaea, #dcdcdc);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 999;
-            overflow: hidden;
             animation: fadeOut 1.2s ease forwards;
             animation-delay: 3s;
         }
 
         #logo {
-            width: 320px;
+            width: 260px;
             opacity: 0;
-            transform: scale(0.8);
-            filter: blur(10px);
-            animation: logoReveal 2.5s ease forwards;
+            transform: scale(0.85);
+            filter: blur(12px);
+            animation: logoIn 2.2s ease forwards;
         }
 
+        /* IŞIK GEÇİŞİ */
         #overlay::after {
             content: "";
             position: absolute;
@@ -52,19 +52,19 @@
             background: linear-gradient(
                 120deg,
                 transparent 30%,
-                rgba(255,255,255,0.6),
+                rgba(255,255,255,0.7),
                 transparent 70%
             );
-            animation: shine 2.5s ease;
+            animation: shine 2.2s ease;
         }
 
-        @keyframes logoReveal {
+        @keyframes logoIn {
             0% {
                 opacity: 0;
-                transform: scale(0.8);
-                filter: blur(10px);
+                transform: scale(0.85);
+                filter: blur(12px);
             }
-            50% {
+            60% {
                 opacity: 1;
                 transform: scale(1.05);
                 filter: blur(2px);
@@ -78,10 +78,10 @@
 
         @keyframes shine {
             0% {
-                transform: translateX(-100%) rotate(20deg);
+                transform: translateX(-120%) rotate(20deg);
             }
             100% {
-                transform: translateX(100%) rotate(20deg);
+                transform: translateX(120%) rotate(20deg);
             }
         }
 
@@ -91,12 +91,16 @@
                 pointer-events: none;
             }
         }
+
+        /* Hafif premium dokunuş */
+        canvas {
+            filter: contrast(1.05) saturate(1.05);
+        }
     </style>
 </head>
 
 <body>
 
-    <!-- Açılış logosu -->
     <div id="overlay">
         <img id="logo" src="logo.png" alt="logo">
     </div>
@@ -104,85 +108,6 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
-        let audioCtx;
-        let openingBuffer = null;
-        window.__openingPlayed = false;
-
-        async function loadOpeningSound() {
-            try {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-                const delay = audioCtx.createDelay();
-                delay.delayTime.value = 0.25;
-
-                const feedback = audioCtx.createGain();
-                feedback.gain.value = 0.45;
-
-                const outputGain = audioCtx.createGain();
-                outputGain.gain.value = 1.1;
-
-                delay.connect(feedback);
-                feedback.connect(delay);
-
-                delay.connect(outputGain);
-                outputGain.connect(audioCtx.destination);
-
-                const response = await fetch("opening.mp3");
-                const arrayBuffer = await response.arrayBuffer();
-                openingBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-
-                window.playOpeningWithEcho = function () {
-                    if (!openingBuffer || window.__openingPlayed) return;
-                    try {
-                        const source = audioCtx.createBufferSource();
-                        source.buffer = openingBuffer;
-                        source.connect(audioCtx.destination);
-                        source.connect(delay);
-                        source.start(0);
-                        window.__openingPlayed = true;
-                    } catch (e) {
-                        console.warn("Opening sound play error:", e);
-                    }
-                };
-            } catch (e) {
-                console.warn("Audio loading failed:", e);
-            }
-        }
-
-        loadOpeningSound();
-
-        setTimeout(() => {
-            if (window.playOpeningWithEcho) {
-                try { window.playOpeningWithEcho(); } catch(e) {}
-            }
-        }, 500);
-
-        function unlockAudioAndPlay() {
-            if (audioCtx && audioCtx.state === "suspended") {
-                audioCtx.resume().catch(()=>{});
-            }
-            if (window.playOpeningWithEcho && !window.__openingPlayed) {
-                try { window.playOpeningWithEcho(); } catch(e) {}
-            }
-            document.removeEventListener('click', unlockAudioAndPlay);
-            document.removeEventListener('touchstart', unlockAudioAndPlay);
-            document.removeEventListener('keydown', unlockAudioAndPlay);
-        }
-
-        document.addEventListener('click', unlockAudioAndPlay, { once: true });
-        document.addEventListener('touchstart', unlockAudioAndPlay, { once: true });
-        document.addEventListener('keydown', unlockAudioAndPlay, { once: true });
-
-        setTimeout(() => {
-            if (audioCtx && audioCtx.state === "suspended") {
-                audioCtx.resume().then(() => {
-                    if (window.playOpeningWithEcho && !window.__openingPlayed) {
-                        try { window.playOpeningWithEcho(); } catch(e) {}
-                    }
-                }).catch(()=>{});
-            }
-        }, 1200);
-
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -241,7 +166,7 @@
                 ctx.drawImage(cisimImg, c.x, c.y, c.width, c.height);
             }
 
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = '#111';
             ctx.font = '28px Arial';
             ctx.fillText('Skor: ' + skor, 20, 40);
         }
@@ -276,7 +201,7 @@
             karakter.y = canvas.height - 220;
         });
 
-        setTimeout(baslat, 3300);
+        setTimeout(baslat, 3000);
     </script>
 
 </body>
