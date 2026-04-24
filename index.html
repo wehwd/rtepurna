@@ -12,7 +12,6 @@ body {
     font-family: Arial, sans-serif;
 }
 
-/* OVERLAY */
 #overlay {
     position: absolute;
     inset: 0;
@@ -25,13 +24,12 @@ body {
     animation-delay: 3s;
 }
 
-/* 🔥 LOGO 4X + BACKGROUND REMOVE */
 #logo {
-    width: 1000px; /* büyütüldü */
+    width: 1000px;
     opacity: 0;
     transform: scale(0.85);
     filter: blur(12px);
-    mix-blend-mode: multiply; /* beyazı yok eder */
+    mix-blend-mode: multiply;
     animation: logoIn 2.2s ease forwards;
 }
 
@@ -44,13 +42,11 @@ body {
     to {opacity:0; pointer-events:none;}
 }
 
-/* CANVAS */
 canvas {
     position: absolute;
     inset: 0;
 }
 
-/* 🧊 UI */
 #ui {
     position: absolute;
     top: 20px;
@@ -84,7 +80,7 @@ const ui = document.getElementById('ui');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-/* ✨ PARTİKÜLLER */
+/* ✨ BACKGROUND PARTICLES */
 let particles = [];
 for(let i=0;i<80;i++){
     particles.push({
@@ -111,6 +107,60 @@ function drawParticles(){
     }
 }
 
+/* 💥 ÇARPIŞMA EFEKTİ */
+let effects = [];
+
+function createEffect(x,y){
+    for(let i=0;i<12;i++){
+        effects.push({
+            x:x,
+            y:y,
+            vx:(Math.random()-0.5)*4,
+            vy:(Math.random()-0.5)*4,
+            life:30
+        });
+    }
+}
+
+function drawEffects(){
+    for(let i=effects.length-1;i>=0;i--){
+        let e = effects[i];
+        ctx.beginPath();
+        ctx.fillStyle="rgba(0,0,0,0.2)";
+        ctx.arc(e.x,e.y,3,0,Math.PI*2);
+        ctx.fill();
+
+        e.x+=e.vx;
+        e.y+=e.vy;
+        e.life--;
+
+        if(e.life<=0){
+            effects.splice(i,1);
+        }
+    }
+}
+
+/* 🔊 BLUP SES */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playBlup(){
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.15);
+
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.15);
+}
+
 /* 🎮 OYUN */
 let karakter = { x: canvas.width / 2, y: canvas.height - 220, width: 140, height: 170 };
 let skor = 0;
@@ -132,6 +182,7 @@ function yeniCisim(){
     });
 }
 
+/* 🧼 BACKGROUND REMOVE */
 function removeWhite(ctx, x, y, w, h){
     const imgData = ctx.getImageData(x, y, w, h);
     const data = imgData.data;
@@ -160,6 +211,10 @@ function cisimleriGuncelle(){
         ) {
             skor++;
             ui.innerText = "Skor: " + skor;
+
+            createEffect(cisimler[i].x, cisimler[i].y); // 💥 efekt
+            playBlup(); // 🔊 ses
+
             cisimler.splice(i, 1);
             continue;
         }
@@ -174,12 +229,14 @@ function oyunCiz(){
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     drawParticles();
+    drawEffects();
 
     ctx.drawImage(karakterImg, karakter.x, karakter.y, karakter.width, karakter.height);
     removeWhite(ctx, karakter.x, karakter.y, karakter.width, karakter.height);
 
     for (let c of cisimler) {
         ctx.drawImage(cisimImg, c.x, c.y, c.width, c.height);
+        removeWhite(ctx, c.x, c.y, c.width, c.height); // 🔥 NESNEYE DE EKLENDİ
     }
 }
 
