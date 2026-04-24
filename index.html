@@ -126,7 +126,7 @@ function drawEffects(){
     for(let i=effects.length-1;i>=0;i--){
         let e = effects[i];
         ctx.beginPath();
-        ctx.fillStyle="rgba(0,0,0,0.2)";
+        ctx.fillStyle="rgba(0,0,0,0.25)";
         ctx.arc(e.x,e.y,3,0,Math.PI*2);
         ctx.fill();
 
@@ -140,25 +140,34 @@ function drawEffects(){
     }
 }
 
-/* 🔊 BLUP SES */
+/* 🔊 RANDOM SES SİSTEMİ */
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playBlup(){
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
 
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.15);
+    const types = ["sine", "triangle", "square"];
+    osc.type = types[Math.floor(Math.random()*types.length)];
 
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    let baseFreq = 300 + Math.random()*400;
+
+    osc.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(
+        baseFreq * (0.3 + Math.random()*0.3),
+        audioCtx.currentTime + 0.12 + Math.random()*0.1
+    );
+
+    let duration = 0.1 + Math.random()*0.15;
+
+    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
 
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.15);
+    osc.stop(audioCtx.currentTime + duration);
 }
 
 /* 🎮 OYUN */
@@ -212,8 +221,8 @@ function cisimleriGuncelle(){
             skor++;
             ui.innerText = "Skor: " + skor;
 
-            createEffect(cisimler[i].x, cisimler[i].y); // 💥 efekt
-            playBlup(); // 🔊 ses
+            createEffect(cisimler[i].x, cisimler[i].y);
+            playBlup();
 
             cisimler.splice(i, 1);
             continue;
@@ -236,7 +245,7 @@ function oyunCiz(){
 
     for (let c of cisimler) {
         ctx.drawImage(cisimImg, c.x, c.y, c.width, c.height);
-        removeWhite(ctx, c.x, c.y, c.width, c.height); // 🔥 NESNEYE DE EKLENDİ
+        removeWhite(ctx, c.x, c.y, c.width, c.height);
     }
 }
 
