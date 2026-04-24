@@ -20,45 +20,76 @@
             display: block;
         }
 
-        /* ----------------------------------------
-           LOGO AÇILIŞ EFEKTİ + SES SENKRON GLITCH
-        ---------------------------------------- */
+        /* ==============================
+           YENİ LÜKS AÇILIŞ EFEKTİ
+        ============================== */
         #overlay {
             position: absolute;
             inset: 0;
+            background: radial-gradient(circle at center, #ffffff 0%, #f0f0f0 40%, #dcdcdc 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            background: white;
             z-index: 999;
-            animation: overlayFadeOut 1s ease forwards;
-            animation-delay: 3.2s;
+            overflow: hidden;
+            animation: fadeOut 1.2s ease forwards;
+            animation-delay: 3s;
         }
 
         #logo {
-            max-width: 60%;         /* Daha büyük logo */
+            width: 320px;
             opacity: 0;
-            transform: scale(0.6);
-            animation: logoMainAnim 3s ease-out forwards;
+            transform: scale(0.8);
+            filter: blur(10px);
+            animation: logoReveal 2.5s ease forwards;
         }
 
-        /* SES PATLAMASINA GÖRE GLITCH + BÜYÜME */
-        @keyframes logoMainAnim {
-            0%   { opacity: 0; transform: scale(0.6); filter: blur(0px); }
-            20%  { opacity: 1; transform: scale(0.9); }
-            45%  { transform: scale(1.0); }
-
-            /* Yankı başladığı an – GLITCH */
-            60%  { transform: scale(1.8) skewX(3deg); filter: blur(2px) brightness(120%); }
-            70%  { transform: scale(2.2) skewX(-3deg); filter: blur(1px); }
-            85%  { transform: scale(2.6); filter: blur(3px) brightness(150%); }
-
-            100% { opacity: 1; transform: scale(3.0); filter: blur(6px); }
+        #overlay::after {
+            content: "";
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                120deg,
+                transparent 30%,
+                rgba(255,255,255,0.6),
+                transparent 70%
+            );
+            animation: shine 2.5s ease;
         }
 
-        @keyframes overlayFadeOut {
-            from { opacity: 1; }
-            to   { opacity: 0; pointer-events: none; }
+        @keyframes logoReveal {
+            0% {
+                opacity: 0;
+                transform: scale(0.8);
+                filter: blur(10px);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.05);
+                filter: blur(2px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+                filter: blur(0);
+            }
+        }
+
+        @keyframes shine {
+            0% {
+                transform: translateX(-100%) rotate(20deg);
+            }
+            100% {
+                transform: translateX(100%) rotate(20deg);
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                pointer-events: none;
+            }
         }
     </style>
 </head>
@@ -73,18 +104,14 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
-        /* ============================================================
-           AÇILIŞ SESİ (YANKI + DELAY + GLITCH MOMENT SENKRON)
-        ============================================================ */
         let audioCtx;
         let openingBuffer = null;
-        window.__openingPlayed = false; // tekrar çalmayı engellemek için bayrak
+        window.__openingPlayed = false;
 
         async function loadOpeningSound() {
             try {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-                /* Yankı – Echo efekti */
                 const delay = audioCtx.createDelay();
                 delay.delayTime.value = 0.25;
 
@@ -94,15 +121,12 @@
                 const outputGain = audioCtx.createGain();
                 outputGain.gain.value = 1.1;
 
-                // echo feedback loop
                 delay.connect(feedback);
                 feedback.connect(delay);
 
-                // delay -> output
                 delay.connect(outputGain);
                 outputGain.connect(audioCtx.destination);
 
-                /* MP3 dosyasını yükle */
                 const response = await fetch("opening.mp3");
                 const arrayBuffer = await response.arrayBuffer();
                 openingBuffer = await audioCtx.decodeAudioData(arrayBuffer);
@@ -112,13 +136,11 @@
                     try {
                         const source = audioCtx.createBufferSource();
                         source.buffer = openingBuffer;
-                        // connect source both to direct output and to delay for fullness
                         source.connect(audioCtx.destination);
                         source.connect(delay);
                         source.start(0);
                         window.__openingPlayed = true;
                     } catch (e) {
-                        // sessizce yakala
                         console.warn("Opening sound play error:", e);
                     }
                 };
@@ -127,41 +149,30 @@
             }
         }
 
-        /* Ses dosyasını hazırla */
         loadOpeningSound();
 
-        /* Normalde bu zamanlama ile deniyoruz (tarayıcı izin verirse) */
         setTimeout(() => {
             if (window.playOpeningWithEcho) {
-                // Eğer otomatik engellenirse, unlock logic ile tetiklenecek
                 try { window.playOpeningWithEcho(); } catch(e) {}
             }
         }, 500);
 
-        /* ------------------------------------------------------------
-           Autoplay engelini aşma: kullanıcı etkileşimi ile açma (görünmez)
-           ------------------------------------------------------------ */
         function unlockAudioAndPlay() {
-            // resume audio context if suspended
             if (audioCtx && audioCtx.state === "suspended") {
                 audioCtx.resume().catch(()=>{});
             }
-            // play if ready
             if (window.playOpeningWithEcho && !window.__openingPlayed) {
                 try { window.playOpeningWithEcho(); } catch(e) {}
             }
-            // remove listeners after first interaction
             document.removeEventListener('click', unlockAudioAndPlay);
             document.removeEventListener('touchstart', unlockAudioAndPlay);
             document.removeEventListener('keydown', unlockAudioAndPlay);
         }
 
-        // Add interaction listeners (first click/tap/keydown will unlock audio)
         document.addEventListener('click', unlockAudioAndPlay, { once: true });
         document.addEventListener('touchstart', unlockAudioAndPlay, { once: true });
         document.addEventListener('keydown', unlockAudioAndPlay, { once: true });
 
-        // Ayrıca kısa bir süre sonra otomatik bir deneme daha (bazı tarayıcılar izin veriyor)
         setTimeout(() => {
             if (audioCtx && audioCtx.state === "suspended") {
                 audioCtx.resume().then(() => {
@@ -171,10 +182,6 @@
                 }).catch(()=>{});
             }
         }, 1200);
-
-        /* ============================================================
-           OYUN – Hiçbir Kod Silinmedi, Aynen Kaldı
-        ============================================================ */
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -269,7 +276,6 @@
             karakter.y = canvas.height - 220;
         });
 
-        /* Açılış animasyonu bittiğinde oyun başlıyor */
         setTimeout(baslat, 3300);
     </script>
 
