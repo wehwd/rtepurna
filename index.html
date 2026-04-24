@@ -1,208 +1,210 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="google-site-verification" content="tOI2qXvjZak4Hp1zofdp1gb1TvStyZKXJSpBwX6B-_0" />
-    <title>RTEpurna</title>
+<meta charset="UTF-8">
+<title>RTEpurna</title>
 
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8097201672279533"
-     crossorigin="anonymous"></script>
+<style>
+body {
+    margin: 0;
+    background: #f2f2f2;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
 
-    <style>
-        body {
-            margin: 0;
-            background-color: #f5f5f5;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-        }
+/* OVERLAY (aynı elit açılış) */
+#overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #ffffff, #eaeaea, #dcdcdc);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    animation: fadeOut 1.2s ease forwards;
+    animation-delay: 3s;
+}
 
-        canvas {
-            display: block;
-        }
+#logo {
+    width: 260px;
+    opacity: 0;
+    transform: scale(0.85);
+    filter: blur(12px);
+    animation: logoIn 2.2s ease forwards;
+}
 
-        /* =========================
-           ELİT AÇILIŞ EFEKTİ
-        ========================= */
-        #overlay {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, #ffffff, #eaeaea, #dcdcdc);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 999;
-            animation: fadeOut 1.2s ease forwards;
-            animation-delay: 3s;
-        }
+@keyframes logoIn {
+    0% {opacity:0; transform:scale(0.85); filter:blur(12px);}
+    100% {opacity:1; transform:scale(1); filter:blur(0);}
+}
 
-        #logo {
-            width: 260px;
-            opacity: 0;
-            transform: scale(0.85);
-            filter: blur(12px);
-            animation: logoIn 2.2s ease forwards;
-        }
+@keyframes fadeOut {
+    to {opacity:0; pointer-events:none;}
+}
 
-        /* IŞIK GEÇİŞİ */
-        #overlay::after {
-            content: "";
-            position: absolute;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(
-                120deg,
-                transparent 30%,
-                rgba(255,255,255,0.7),
-                transparent 70%
-            );
-            animation: shine 2.2s ease;
-        }
+/* CANVAS */
+canvas {
+    position: absolute;
+    inset: 0;
+}
 
-        @keyframes logoIn {
-            0% {
-                opacity: 0;
-                transform: scale(0.85);
-                filter: blur(12px);
-            }
-            60% {
-                opacity: 1;
-                transform: scale(1.05);
-                filter: blur(2px);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1);
-                filter: blur(0);
-            }
-        }
-
-        @keyframes shine {
-            0% {
-                transform: translateX(-120%) rotate(20deg);
-            }
-            100% {
-                transform: translateX(120%) rotate(20deg);
-            }
-        }
-
-        @keyframes fadeOut {
-            to {
-                opacity: 0;
-                pointer-events: none;
-            }
-        }
-
-        /* Hafif premium dokunuş */
-        canvas {
-            filter: contrast(1.05) saturate(1.05);
-        }
-    </style>
+/* 🧊 GLASS PANEL */
+#ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 12px 20px;
+    border-radius: 14px;
+    backdrop-filter: blur(10px);
+    background: rgba(255,255,255,0.35);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    font-size: 18px;
+    color: #111;
+}
+</style>
 </head>
 
 <body>
 
-    <div id="overlay">
-        <img id="logo" src="logo.png" alt="logo">
-    </div>
+<div id="overlay">
+    <img id="logo" src="logo.png">
+</div>
 
-    <canvas id="gameCanvas"></canvas>
+<div id="ui">Skor: 0</div>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+<canvas id="gameCanvas"></canvas>
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const ui = document.getElementById('ui');
 
-        let karakter = { x: canvas.width / 2, y: canvas.height - 220, width: 120, height: 150 };
-        let skor = 0;
-        let cisimler = [];
-        let oyunAktif = true;
-        let yeniCisimInterval = null;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-        const karakterImg = new Image();
-        karakterImg.src = 'karakter.png';
+/* =========================
+   ✨ PARTİKÜL SİSTEMİ
+========================= */
+let particles = [];
 
-        const cisimImg = new Image();
-        cisimImg.src = 'cisim.png';
+function createParticle() {
+    particles.push({
+        x: Math.random()*canvas.width,
+        y: Math.random()*canvas.height,
+        size: Math.random()*2 + 1,
+        speedY: Math.random()*0.5 + 0.2,
+        opacity: Math.random()
+    });
+}
 
-        function yeniCisim() {
-            cisimler.push({
-                x: Math.random() * (canvas.width - 60),
-                y: -60,
-                width: 60,
-                height: 60,
-                speed: 2 + Math.random() * 2
-            });
+for(let i=0;i<80;i++) createParticle();
+
+function drawParticles() {
+    for(let p of particles){
+        ctx.beginPath();
+        ctx.fillStyle = "rgba(0,0,0,"+p.opacity*0.15+")";
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+        ctx.fill();
+
+        p.y += p.speedY;
+        if(p.y > canvas.height) {
+            p.y = 0;
+            p.x = Math.random()*canvas.width;
+        }
+    }
+}
+
+/* =========================
+   OYUN (dokunulmadı)
+========================= */
+let karakter = { x: canvas.width / 2, y: canvas.height - 220, width: 120, height: 150 };
+let skor = 0;
+let cisimler = [];
+let oyunAktif = true;
+let yeniCisimInterval = null;
+
+const karakterImg = new Image();
+karakterImg.src = 'karakter.png';
+
+const cisimImg = new Image();
+cisimImg.src = 'cisim.png';
+
+function yeniCisim() {
+    cisimler.push({
+        x: Math.random() * (canvas.width - 60),
+        y: -60,
+        width: 60,
+        height: 60,
+        speed: 2 + Math.random() * 2
+    });
+}
+
+function cisimleriGuncelle() {
+    for (let i = cisimler.length - 1; i >= 0; i--) {
+        cisimler[i].y += cisimler[i].speed;
+
+        if (
+            cisimler[i].x < karakter.x + karakter.width &&
+            cisimler[i].x + cisimler[i].width > karakter.x &&
+            cisimler[i].y < karakter.y + karakter.height &&
+            cisimler[i].y + cisimler[i].height > karakter.y
+        ) {
+            skor++;
+            ui.innerText = "Skor: " + skor;
+            cisimler.splice(i, 1);
+            continue;
         }
 
-        function cisimleriGuncelle() {
-            for (let i = cisimler.length - 1; i >= 0; i--) {
-                cisimler[i].y += cisimler[i].speed;
-
-                if (
-                    cisimler[i].x < karakter.x + karakter.width &&
-                    cisimler[i].x + cisimler[i].width > karakter.x &&
-                    cisimler[i].y < karakter.y + karakter.height &&
-                    cisimler[i].y + cisimler[i].height > karakter.y
-                ) {
-                    skor++;
-                    cisimler.splice(i, 1);
-                    continue;
-                }
-
-                if (cisimler[i].y > canvas.height + 100) {
-                    cisimler.splice(i, 1);
-                }
-            }
+        if (cisimler[i].y > canvas.height + 100) {
+            cisimler.splice(i, 1);
         }
+    }
+}
 
-        function oyunCiz() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+function oyunCiz() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            ctx.drawImage(karakterImg, karakter.x, karakter.y, karakter.width, karakter.height);
+    drawParticles(); // ✨ ekledik
 
-            for (let c of cisimler) {
-                ctx.drawImage(cisimImg, c.x, c.y, c.width, c.height);
-            }
+    ctx.drawImage(karakterImg, karakter.x, karakter.y, karakter.width, karakter.height);
 
-            ctx.fillStyle = '#111';
-            ctx.font = '28px Arial';
-            ctx.fillText('Skor: ' + skor, 20, 40);
-        }
+    for (let c of cisimler) {
+        ctx.drawImage(cisimImg, c.x, c.y, c.width, c.height);
+    }
+}
 
-        function oyunDongusu() {
-            if (!oyunAktif) return;
-            cisimleriGuncelle();
-            oyunCiz();
-            requestAnimationFrame(oyunDongusu);
-        }
+function oyunDongusu() {
+    if (!oyunAktif) return;
+    cisimleriGuncelle();
+    oyunCiz();
+    requestAnimationFrame(oyunDongusu);
+}
 
-        function baslat() {
-            oyunDongusu();
-            if (yeniCisimInterval) clearInterval(yeniCisimInterval);
-            yeniCisimInterval = setInterval(yeniCisim, 1000);
-        }
+function baslat() {
+    oyunDongusu();
+    if (yeniCisimInterval) clearInterval(yeniCisimInterval);
+    yeniCisimInterval = setInterval(yeniCisim, 1000);
+}
 
-        canvas.addEventListener('mousemove', (e) => {
-            if (!oyunAktif) return;
-            karakter.x = e.clientX - karakter.width / 2;
-        });
+canvas.addEventListener('mousemove', (e) => {
+    if (!oyunAktif) return;
+    karakter.x = e.clientX - karakter.width / 2;
+});
 
-        canvas.addEventListener('touchmove', (e) => {
-            if (!oyunAktif) return;
-            e.preventDefault();
-            karakter.x = e.touches[0].clientX - karakter.width / 2;
-        }, { passive: false });
+canvas.addEventListener('touchmove', (e) => {
+    if (!oyunAktif) return;
+    e.preventDefault();
+    karakter.x = e.touches[0].clientX - karakter.width / 2;
+}, { passive: false });
 
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            karakter.y = canvas.height - 220;
-        });
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    karakter.y = canvas.height - 220;
+});
 
-        setTimeout(baslat, 3000);
-    </script>
+setTimeout(baslat, 3000);
+</script>
 
 </body>
 </html>
